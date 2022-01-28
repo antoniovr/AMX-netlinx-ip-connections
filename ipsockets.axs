@@ -1,6 +1,6 @@
-PROGRAM_NAME='test'
+PROGRAM_NAME='ipsockets'
 (***********************************************************)
-(*  FILE_LAST_MODIFIED_ON: 01/28/2022  AT: 10:03:34        *)
+(*  FILE_LAST_MODIFIED_ON: 01/28/2022  AT: 10:17:25        *)
 (***********************************************************)
 
 DEFINE_DEVICE 
@@ -10,9 +10,6 @@ DEFINE_DEVICE
 
     // Dispositivo para conexión IP
     dvSocket = 0:5:0
-    dvServer = 0:6:0
-
-#include 'EarAPI.axi'
 
 DEFINE_CONSTANT
 
@@ -50,6 +47,9 @@ DEFINE_EVENT
 	{
 	    // Nos indica si ha habido algún error con la conexión o el intento de conexión
 	    send_string 0,"'Error: ',itoa(data.number)" // data.number almacena el número del error
+	    
+	    // Ponemos el manejador a -1 para que vuelva a reconectar
+	    snHandler = -1
 		
 	    /* Tipos de errores:
 		2:  General Failure (IP_CLIENT_OPEN/IP_SERVER_OPEN)
@@ -76,6 +76,9 @@ DEFINE_EVENT
 	{
 	    // Entrará por aquí cuando se caiga o se cierre la conexión
 	    send_string 0,'Offline'
+	    
+	    // Ponemos el manejador a -1 para que vuelva a reconectar
+	    snHandler = -1
 	}	
 	string:
 	{
@@ -83,22 +86,7 @@ DEFINE_EVENT
 	    send_string 0,"'Recibimos: ',data.text" // data.text contiene la cadena que recibamos
 	}
     }
-	
-    data_event[dvServer]
-    {
-	online:
-	{
-	    send_string 0,'Server online'
-	}
-	offline:
-	{
-	    send_string 0,'Server offline'
-	}
-	string:
-	{
-	    send_string 0,"'Server receives: ',data.text"
-	}
-    }
+
 
     timeline_event[_TLID]
     {
@@ -108,7 +96,7 @@ DEFINE_EVENT
 	    if(snHandler < 0)
 	    {
 		// Se puede reutilizar ésto para reconectar siempre que se caiga
-		// snHandler = ip_client_open(dvSocket.port,'192.168.1.100',5000,IP_TCP)
+		snHandler = ip_client_open(dvSocket.port,'192.168.1.100',5000,IP_TCP)
 	    }
 	}
     }
@@ -123,40 +111,7 @@ DEFINE_EVENT
 	    {
 		case 1: 
 		{
-		    // Abrir el socket
-		    //send_string 0,'Abrimos el socket'
-		    /* Argumentos:
-			- Puerto del dispositivo que estamos usando
-			- IP del equipo al que queremos conectar
-			- Puerto del equipo
-			- Modo de comunicación IP_TCP, IP_UDP o IP_UDP_2WAY
-		    */
-		    snHandler = ip_client_open(dvSocket.port,'192.168.1.133',5000,IP_TCP)
-		}
-		case 2:
-		{
-		    send_string 0,'Cerramos el socket'
-		    ip_client_close(dvSocket.port)
-		}
-		case 3:
-		{
-		    send_string 0,'Enviamos una cadena al otro equipo'
-		    send_string dvSocket,'Hello world!'
-		}
-		case 4:
-		{
-		    send_string 0,'Abrimos puerto de escucha'
-		    ip_server_open(dvServer.PORT,5000,IP_TCP)
-		}
-		case 5:
-		{
-		    send_string 0,'Cerramos el puerto de escucha'
-		    ip_server_close(dvServer.PORT)
-		}
-		case 6:
-		{
-		    send_string 0,'Enviamos cadena al cliente conectado'
-		    send_string dvServer,'Hello client!'
+		    
 		}
 	    }
 	}
