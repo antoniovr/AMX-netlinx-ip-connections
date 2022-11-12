@@ -1,6 +1,6 @@
 PROGRAM_NAME='ipsockets_connect_to_send'
 (***********************************************************)
-(*  FILE_LAST_MODIFIED_ON: 01/28/2022  AT: 10:20:51        *)
+(*  FILE_LAST_MODIFIED_ON: 11/12/2022  AT: 17:46:16        *)
 (***********************************************************)
 
 DEFINE_DEVICE 
@@ -8,15 +8,15 @@ DEFINE_DEVICE
     dvTp = 10001:1:0
     vdvSystem = 33000:1:0
 
-    // Dispositivo para conexión IP
+    // Device for ip connection
     dvSocket = 0:5:0
 
 
 DEFINE_VARIABLE
 
-    volatile integer anCanales[] = {1,2,3,4,5,6}
+    volatile integer anChannels[] = {1,2,3,4,5,6}
 
-    // Variable global para almacenar el comando a enviar
+    // Global variable to store the command to send
     volatile char sCommandToSend[64] = ''
 
 DEFINE_EVENT
@@ -25,26 +25,26 @@ DEFINE_EVENT
     {
 	online:
 	{
-	    // Entrará por aquí cuando la conexión se realice satisfactoriamente
-	    send_string 0,'Online y listo para enviar'
+	    // It will get into this section when the connection is established
+	    send_string 0,'Online and ready to send'
 	    send_string dvSocket,"sCommandToSend"
 	    ip_client_close(dvSocket.PORT)
 	}	
 	string:
 	{
-	    // Aquí recibimos las cadenas que nos envíen
-	    send_string 0,"'Recibimos: ',data.text" // data.text contiene la cadena que recibamos
+	    // It will get into this section when we receive a string through the socket connection
+            // data.text will store the string we have received
+	    send_string 0,"'Recibimos: ',data.text" 
 	}
     }
 
-
-    channel_event[dvTp,anCanales]
+    channel_event[dvTp,anChannels]
     {
 	on:
 	{
-	    stack_var integer nCanalActivado
-	    nCanalActivado = get_last(anCanales)
-	    switch(nCanalActivado)
+	    stack_var integer nActivatedChannel
+	    nActivatedChannel = get_last(anChannels)
+	    switch(nActivatedChannel)
 	    {
 		case 1: 
 		{
