@@ -1,6 +1,6 @@
 PROGRAM_NAME='ipsockets'
 (***********************************************************)
-(*  FILE_LAST_MODIFIED_ON: 01/28/2022  AT: 10:17:25        *)
+(*  FILE_LAST_MODIFIED_ON: 11/12/2022  AT: 17:42:10        *)
 (***********************************************************)
 
 DEFINE_DEVICE 
@@ -8,33 +8,34 @@ DEFINE_DEVICE
     dvTp = 10001:1:0
     vdvSystem = 33000:1:0
 
-    // Dispositivo para conexión IP
+    // Device for ip connection (note that device is 0 and the important thing is the port parameter (device:port:system)
     dvSocket = 0:5:0
 
 DEFINE_CONSTANT
 
-    // Id del timeline, única por cada bloque de código cerrado
+    // Timeline ID, it's unique for each closed code block
     volatile long _TLID = 1
 
 DEFINE_VARIABLE
 
-    // Definimos los tiempos de los que está compuesto nuestro timeline
-    volatile long lTimes[] = {500} // Actualiza el feedback cada 1/2 segundo
-    volatile integer anCanales[] = {1,2,3,4,5,6}
+    // We define the times that are part of our timeline, in this case is only one because we need a timeline that executes 
+    // every 1/2 seconds
+    volatile long lTimes[] = {500} // milliseconds, 1/2 seconds
+    volatile integer anChannels[] = {1,2,3,4,5,6}
     volatile slong snHandler = -1
 
 DEFINE_START
 
     /*
-    Argumentos
-	1 - ID del timeline, debe ser un long
-	2 - Tiempos de los que está compuesto el timeline
-	3 - Elegir entre:
-	    * timeline_relative: cada tiempo definido es a partir del tiempo anterior
-	    * timeline_absolute: cada tiempo definido es a partir del inicio del timeline
-	4 - Elegir entre:
-	    * timeline_once: el TL se ejecuta una única vez
-	    * timeline_repeat: el timeline 
+    Arguments
+	1 - Timeline ID, it has to be LONG
+	2 - Array of times for our timeline
+	3 - Choose between:
+	    * timeline_relative: each time it's starting from the previous one
+	    * timeline_absolute: each times takes the start of the timeline as base
+	4 - Choose between:
+	    * timeline_once: The timeline executes only one time
+	    * timeline_repeat: The timeline repeats until you stop it
     */
     timeline_create(_TLID,lTimes,1,timeline_relative,timeline_repeat)
 
@@ -45,13 +46,14 @@ DEFINE_EVENT
     {
 	onerror:
 	{
-	    // Nos indica si ha habido algún error con la conexión o el intento de conexión
-	    send_string 0,"'Error: ',itoa(data.number)" // data.number almacena el número del error
+	    // The execution enters on this section if there has been an error trying to pen the connection or 
+            // during the connection
+	    send_string 0,"'Error: ',itoa(data.number)" // data.number stores the number of the error
 	    
-	    // Ponemos el manejador a -1 para que vuelva a reconectar
+	    // We put the handler to -1 to reconnect again in the TIMELINE_EVENT (on the bottom of the file)
 	    snHandler = -1
 		
-	    /* Tipos de errores:
+	    /* Types of error:
 		2:  General Failure (IP_CLIENT_OPEN/IP_SERVER_OPEN)
 		4:  Unknown host or DNS error (IP_CLIENT_OPEN)
 		6:  Connection refused (IP_CLIENT_OPEN)
@@ -64,50 +66,52 @@ DEFINE_EVENT
 		11: Listening error (IP_SERVER_OPEN)
 		15: UDP socket already listening (IP_SERVER_OPEN)
 		17: Local port not open, can not send string (IP_CLIENT_OPEN)
-		Otros: Unknown
+		Others: Unknown
 	    */
 	}
 	online:
 	{
-	    // Entrará por aquí cuando la conexión se realice satisfactoriamente
+	    // It will enter in this section when the connection is established
 	    send_string 0,'Online'
 	}
 	offline:
 	{
-	    // Entrará por aquí cuando se caiga o se cierre la conexión
+	    // It will enter in this section when the connection drops or has been closed from the code
 	    send_string 0,'Offline'
 	    
-	    // Ponemos el manejador a -1 para que vuelva a reconectar
+	    // We put the handler to -1 to make the program connect again on the timeline_event (on the bottom of the file)
 	    snHandler = -1
 	}	
 	string:
 	{
-	    // Aquí recibimos las cadenas que nos envíen
-	    send_string 0,"'Recibimos: ',data.text" // data.text contiene la cadena que recibamos
+	    // It will enter in this section when we receive strings through the connection
+	    send_string 0,"'We receive: ',data.text" // data.text stores the received string
 	}
     }
 
 
     timeline_event[_TLID]
     {
-	// Entrará aquí cada 1/2 segundo
+	// It will enter in this section every 1/2 second
+        
+        // we wait extra 5 seconds to check the socket connection
 	wait 50
 	{
-	    if(snHandler < 0)
+	    if(snHandler < 0) // Is the handler is lower than 0, the connection is closed and we need to open it again
 	    {
-		// Se puede reutilizar ésto para reconectar siempre que se caiga
 		snHandler = ip_client_open(dvSocket.port,'192.168.1.100',5000,IP_TCP)
 	    }
 	}
     }
-	
-    channel_event[vdvSystem,anCanales]
+
+    // Channel event, just for test purposes
+    channel_event[vdvSystem,anChannels]
     {
 	on:
 	{
-	    stack_var integer nCanalActivado
-	    nCanalActivado = get_last(anCanales)
-	    switch(nCanalActivado)
+	    stack_var integer nActivatedChannel
+	    nActivatedChannel = get_last(anChannels)
+	    switch(nActivatedChannel)
 	    {
 		case 1: 
 		{
